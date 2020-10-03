@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"uberMessenger/chats"
-	"uberMessenger/common"
+	"uberMessenger/src/chats"
+	"uberMessenger/src/common"
 
 	"github.com/davecgh/go-spew/spew"
 	"go.mongodb.org/mongo-driver/bson/primitive"

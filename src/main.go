@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"uberMessenger/common"
-	"uberMessenger/users"
+	"uberMessenger/src/common"
+	"uberMessenger/src/users"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -54,7 +54,7 @@ func main() {
 	}
 	defer client.Disconnect(ctx)
 
-	userDAO,err:=users.NewDAO(ctx, client)
+	userDAO,err:= users.NewDAO(ctx, client)
 	if err!=nil {
 		panic(err)
 	}

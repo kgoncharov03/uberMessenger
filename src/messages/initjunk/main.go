@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"uberMessenger/common"
-	"uberMessenger/messages"
+	"uberMessenger/src/common"
+	"uberMessenger/src/messages"
 )
 
 func main() {
