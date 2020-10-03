@@ -21,6 +21,10 @@ type Endpoints struct {
 
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	ctx:=context.TODO()
 	id := r.URL.Query().Get("id")
 	userID,err:=primitive.ObjectIDFromHex(id)
