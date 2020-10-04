@@ -146,7 +146,11 @@ func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  
 		Time:   time.Now(),
 	}
 
-	e.MessageDAO.AddMessage(context.Background(), msg)
+	err = e.MessageDAO.AddMessage(context.Background(), msg)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 }
 
@@ -169,7 +173,7 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chat:=&chats.Chat{
-		ID:              primitive.ObjectID{},
+		ID:              primitive.NewObjectID(),
 		LastMessageTime: time.Now(),
 		Users:           userIDs,
 		Name:            "",
@@ -182,10 +186,31 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (e *Endpoints) GetUserByNicknameHandler(w http.ResponseWriter, r *http.Request) {
+	e.writeHeaders(w)
+	ctx:=context.Background()
+	nickname := r.URL.Query().Get("nickname")
+
+	user, err:=e.UserDAO.GetUserByNickname(ctx, nickname)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	bytes, err:=json.Marshal(user)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
-	ctx:=context.TODO()
+	ctx:=context.Background()
 	id := r.URL.Query().Get("id")
 	userID,err:=primitive.ObjectIDFromHex(id)
 	if err!=nil {
@@ -316,6 +341,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/usersByNickname/", e.Middleware(http.HandlerFunc(e.GetUserByNicknameHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
