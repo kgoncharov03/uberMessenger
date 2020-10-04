@@ -4,9 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
 const (
@@ -24,8 +27,8 @@ type DAO struct {
 func NewDAO(ctx context.Context, client *mongo.Client) (*DAO, error) {
 	db := client.Database(DBName)
 	collection:=db.Collection(CollectionName)
-/*
-	indexOptions := options.Index().SetUnique(true)
+
+	indexOptions := options.Index().SetUnique(false)
 	indexKeys := bsonx.MDoc{
 		"users": bsonx.Int32(1),
 	}
@@ -38,7 +41,7 @@ func NewDAO(ctx context.Context, client *mongo.Client) (*DAO, error) {
 	_, err := collection.Indexes().CreateOne(ctx, noteIndexModel)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 
 	return &DAO{
 		client:client,
@@ -56,6 +59,8 @@ func (dao *DAO) GetChatsByUser(ctx context.Context, userID primitive.ObjectID) (
 	}
 
 	var result []*Chat
+
+	spew.Dump(filter)
 
 	for cursor.Next(ctx) {
 		var chat *Chat

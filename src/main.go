@@ -203,6 +203,7 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 		e.handleError(w, err)
 		return
 	}
+	spew.Dump(userID)
 
 	chats,err:= e.ChatDAO.GetChatsByUser(ctx, userID)
 	if err!=nil {
@@ -261,7 +262,7 @@ func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
-		log.Fatal(err)
+		log.Print(err)
 		http.Error(w, err.Error(), 500)
 }
 
