@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"uberMessenger/src/auth"
 	"uberMessenger/src/chats"
@@ -31,6 +32,7 @@ type TokenParams struct {
 }
 
 func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
+	spew.Dump(r)
 	e.writeHeaders(w)
 
 	nickname:=r.URL.Query().Get("nickname")
@@ -66,10 +68,10 @@ func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func (e* Endpoints) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		spew.Dump(r)
 		e.writeHeaders(w)
 
 		_, err:=e.getUserIDFromToken(r)
-		spew.Dump(err)
 		if err!=nil {
 			e.handleError(w, err)
 			return
@@ -99,12 +101,18 @@ func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-/*
+
 type AddChatParams struct {
 	Users []string `json:"users"`
 }
 
-func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
+type AddMessageParams struct {
+	FromID string `json:"fromID"`
+	ChatID string `json:"chatID"`
+	Text string `json:"text"`
+}
+
+func (e *Endpoints) AddMessageParams (w http.ResponseWriter, r *http.Request)  {
 	decoder := json.NewDecoder(r.Body)
 	var params AddChatParams
 	err := decoder.Decode(&params)
@@ -112,21 +120,46 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 		e.handleError(w, err)
 		return
 	}
-	var userIDs []primitive.ObjectID
-	for _, id:=range params.Users {
-		idBSON,err:=primitive.ObjectIDFromHex(id)
-		if err!=nil {
 
-		}
+
+}
+
+func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var params AddMessageParams
+	err := decoder.Decode(&params)
+	if err!=nil {
+		e.handleError(w, err)
+		return
 	}
-	chat:=&chats.Chat{
-		ID:              primitive.ObjectID{},
-		LastMessageTime: time.Now(),
-		Users:           params.Users,
-		Name:            "",
+
+	fromID, err:=primitive.ObjectIDFromHex(params.FromID)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	chatID, err:=primitive.ObjectIDFromHex(params.ChatID)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	msg:=&messages.Message{
+		ID:     primitive.NewObjectID(),
+		From:   fromID,
+		ChatID: chatID,
+		Text:   params.Text,
+		Time:   time.Now(),
+	}
+
+	err=e.MessageDAO.AddMessage(context.TODO(), msg)
+	if err!=nil {
+		e.handleError(w, err)
+		return
 	}
 }
-*/
+
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
@@ -261,6 +294,8 @@ func main() {
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet)
 	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet)
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet)
+	router.Handle("/chats", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost)
+
 
 	http.Handle("/",router)
 
