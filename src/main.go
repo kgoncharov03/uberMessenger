@@ -26,9 +26,12 @@ type Endpoints struct {
 	MessageDAO *messages.DAO
 }
 
+type TokenParams struct {
+	Token string `json:"token"`
+}
+
 func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	e.writeHeaders(w)
 
 	nickname:=r.URL.Query().Get("nickname")
 	password:=r.URL.Query().Get("password")
@@ -50,7 +53,9 @@ func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(token))
+	tokenStruct:=&TokenParams{Token:token}
+
+	w.Write([]byte(tokenStruct))
 }
 
 func (e* Endpoints) Middleware(h http.Handler) http.Handler {
@@ -87,6 +92,7 @@ func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
 }
+
 /*
 type AddChatParams struct {
 	Users []string `json:"users"`
@@ -100,7 +106,13 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 		e.handleError(w, err)
 		return
 	}
-	var userIDs:=
+	var userIDs []primitive.ObjectID
+	for _, id:=range params.Users {
+		idBSON,err:=primitive.ObjectIDFromHex(id)
+		if err!=nil {
+
+		}
+	}
 	chat:=&chats.Chat{
 		ID:              primitive.ObjectID{},
 		LastMessageTime: time.Now(),
