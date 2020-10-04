@@ -2,8 +2,9 @@ package messages
 
 import (
 	"context"
+	"time"
 
-	"github.com/joomcode/api/src/misc/generic/timex"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -49,6 +50,31 @@ func NewDAO(ctx context.Context, client *mongo.Client) (*DAO, error) {
 	}, nil
 }
 
+func (dao *DAO) GetMessagesByChat(ctx context.Context, chatID primitive.ObjectID, limit int, offset int) ([]*Message, error) {
+	filter := bson.D{{"chatId", chatID}}
+	options:=options.Find()
+	options.SetSort(bson.D{{"time", -1}})
+	options.SetLimit(int64(limit))
+	options.SetSkip(int64(offset))
+
+	cursor, err := dao.collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*Message
+
+	for cursor.Next(ctx) {
+		var message *Message
+		if err:=cursor.Decode(&message); err!=nil {
+			return nil, err
+		}
+		result = append(result, message)
+	}
+
+	return result, nil
+}
+
 func (dao *DAO) InitJunk(ctx context.Context) error{
 	userID1,err:=primitive.ObjectIDFromHex("5f78829a44202661a33d787a")
 	if err!=nil {
@@ -71,14 +97,14 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 			From:   userID2,
 			ChatID: chat,
 			Text:   "300",
-			Time:   timex.NowMilli().Add(-timex.Day),
+			Time:   time.Now().Add(-time.Hour),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID1,
 			ChatID: chat,
 			Text:   "Отсоси у тракториста",
-			Time:   timex.NowMilli(),
+			Time:   time.Now(),
 		},
 	}
 

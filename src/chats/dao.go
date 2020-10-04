@@ -2,8 +2,8 @@ package chats
 
 import (
 	"context"
+	"time"
 
-	"github.com/joomcode/api/src/misc/generic/timex"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -84,7 +84,7 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 	chats:=[]*Chat{
 		{
 			ID:              primitive.NewObjectID(),
-			LastMessageTime: timex.NowMilli(),
+			LastMessageTime: time.Now(),
 			Users: []primitive.ObjectID{
 				userID1, userID2,
 			},
