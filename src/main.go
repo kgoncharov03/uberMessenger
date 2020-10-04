@@ -290,11 +290,11 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet)
-	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet)
-	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet)
-	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet)
-	router.Handle("/chats", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost)
+	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
 
 
 	http.Handle("/",router)
