@@ -55,7 +55,13 @@ func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenStruct:=&TokenParams{Token:token}
 
-	w.Write([]byte(tokenStruct))
+	bytes, err:=json.Marshal(tokenStruct)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.Write(bytes)
 }
 
 func (e* Endpoints) Middleware(h http.Handler) http.Handler {
