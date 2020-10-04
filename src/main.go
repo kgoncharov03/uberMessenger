@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"uberMessenger/src/auth"
 	"uberMessenger/src/chats"
 	"uberMessenger/src/common"
 	"uberMessenger/src/messages"
@@ -134,9 +135,11 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Path("/users/").Queries("id", "{id}").HandlerFunc(e.GetUserByIDHandler)
-	router.Path("/chats/").Queries("userId", "{userId}").HandlerFunc(e.GetChatsByUser)
-	router.Path("/messages/").HandlerFunc(e.GetMessages)
+	router.Handle("/getToken/", auth.GetTokenHandler)
+	router.Handle("/users/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet)
+	router.Handle("/chats/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet)
+	router.Handle("/messages/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet)
+
 	http.Handle("/",router)
 
 	fmt.Println("Server is listening...")
