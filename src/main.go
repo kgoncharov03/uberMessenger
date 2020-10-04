@@ -27,6 +27,9 @@ type Endpoints struct {
 }
 
 func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	nickname:=r.URL.Query().Get("nickname")
 	password:=r.URL.Query().Get("password")
 
@@ -84,6 +87,28 @@ func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Content-Type", "application/json")
 }
+/*
+type AddChatParams struct {
+	Users []string `json:"users"`
+}
+
+func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var params AddChatParams
+	err := decoder.Decode(&params)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+	var userIDs:=
+	chat:=&chats.Chat{
+		ID:              primitive.ObjectID{},
+		LastMessageTime: time.Now(),
+		Users:           params.Users,
+		Name:            "",
+	}
+}
+*/
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
