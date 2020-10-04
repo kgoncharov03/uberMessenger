@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"uberMessenger/src/auth"
 	"uberMessenger/src/chats"
@@ -13,6 +15,7 @@ import (
 	"uberMessenger/src/messages"
 	"uberMessenger/src/users"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -21,6 +24,59 @@ type Endpoints struct {
 	UserDAO *users.DAO
 	ChatDAO *chats.DAO
 	MessageDAO *messages.DAO
+}
+
+func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
+	nickname:=r.URL.Query().Get("nickname")
+	password:=r.URL.Query().Get("password")
+
+	user,err:=e.UserDAO.GetUserByNickname(context.TODO(), nickname)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	if strings.Compare(password, user.Password) !=0 {
+		e.handleError(w, errors.New("unauthorized"))
+		return
+	}
+
+	token,err := auth.CreateToken(user.ID)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.Write([]byte(token))
+}
+
+func (e* Endpoints) Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		e.writeHeaders(w)
+
+		_, err:=e.getUserIDFromToken(r)
+		spew.Dump(err)
+		if err!=nil {
+			e.handleError(w, err)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+func (e *Endpoints) getUserIDFromToken(r *http.Request) (primitive.ObjectID, error) {
+	authHeader:= r.Header.Get("Authorization")
+
+	if authHeader == "" {
+		return primitive.ObjectID{}, errors.New("unauthorized")
+	}
+
+	headerParts:=strings.Split(authHeader, " ")
+	if len(headerParts) != 2 {
+		return primitive.ObjectID{}, errors.New("unauthorized")
+	}
+
+	return auth.CheckToken(headerParts[1])
 }
 
 func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
@@ -34,14 +90,24 @@ func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	ctx:=context.TODO()
 	id := r.URL.Query().Get("id")
 	userID,err:=primitive.ObjectIDFromHex(id)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	user,err:= e.UserDAO.GetUserByID(ctx, userID)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 
 	bytes, err:=json.Marshal(user)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
 
 	w.WriteHeader(200)
 	w.Write(bytes)
@@ -52,14 +118,23 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 	ctx:=context.TODO()
 	id := r.URL.Query().Get("userId")
 	userID,err:=primitive.ObjectIDFromHex(id)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	chats,err:= e.ChatDAO.GetChatsByUser(ctx, userID)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 
 	bytes, err:=json.Marshal(chats)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	w.WriteHeader(200)
 	w.Write(bytes)
@@ -69,39 +144,43 @@ func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
 	ctx:=context.TODO()
 
-	chatID,err :=primitive.ObjectIDFromHex( r.URL.Query().Get("chatId"))
-	e.handleError(w, err)
+	chatID,err :=primitive.ObjectIDFromHex(r.URL.Query().Get("chatId"))
+	if err!=nil {
+		spew.Dump(err)
+		e.handleError(w, err)
+		return
+	}
 
-	limit,err := strconv.Atoi(r.URL.Query().Get("limit"))
-	e.handleError(w, err)
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
-	offset,err := strconv.Atoi(r.URL.Query().Get("offset"))
-	e.handleError(w, err)
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	msgs, err:=e.MessageDAO.GetMessagesByChat(ctx, chatID, limit, offset)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	bytes, err:=json.Marshal(msgs)
-	e.handleError(w, err)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
 
 	w.WriteHeader(200)
 	w.Write(bytes)
 }
 
 func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
-	if err != nil {
-		w.WriteHeader(500)
-		e:= struct {
-			err string
-		}{
-			err:err.Error(),
-		}
-
-		bytes,_:=json.Marshal(e)
-
-		w.WriteHeader(500)
-		w.Write(bytes)
-	}
+		http.Error(w, err.Error(), 500)
 }
 
 func main() {
@@ -135,10 +214,10 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Handle("/getToken/", auth.GetTokenHandler)
-	router.Handle("/users/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet)
-	router.Handle("/chats/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet)
-	router.Handle("/messages/", auth.JwtMiddleware.Handler(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet)
+	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet)
+	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet)
+	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet)
+	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet)
 
 	http.Handle("/",router)
 

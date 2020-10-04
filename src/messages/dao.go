@@ -75,6 +75,14 @@ func (dao *DAO) GetMessagesByChat(ctx context.Context, chatID primitive.ObjectID
 	return result, nil
 }
 
+func (dao *DAO) AddMessage(ctx context.Context, msg *Message) error {
+	if _, err:= dao.collection.InsertOne(ctx, msg); err!=nil {
+		return err
+	}
+
+	return nil
+}
+
 func (dao *DAO) InitJunk(ctx context.Context) error{
 	userID1,err:=primitive.ObjectIDFromHex("5f78829a44202661a33d787a")
 	if err!=nil {
@@ -117,4 +125,8 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 	}
 
 	return nil
+}
+
+func (dao *DAO) Drop(ctx context.Context) error{
+	return dao.collection.Drop(ctx)
 }

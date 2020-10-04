@@ -1,29 +1,54 @@
 package auth
 
 import (
-	"net/http"
+	"errors"
+	"time"
 
-	jwtmiddleware "github.com/auth0/go-jwt-middleware"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/dgrijalva/jwt-go"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var mySigningKey = []byte("secret")
 
-var GetTokenHandler = http.HandlerFunc(func(w http.ResponseWriter,
-	r *http.Request){
-	// Создаем новый токен
-	token := jwt.New(jwt.SigningMethodHS256)
+type Claims struct {
+	UserID string `json:"userId"`
+	jwt.StandardClaims
+}
+func CreateToken(userID primitive.ObjectID) (string, error) {
+	// create the token
 
-	// Подписываем токен нашим секретным ключем
-	tokenString, _ := token.SignedString(mySigningKey)
+	expirationTime := time.Now().Add(48 * time.Hour)
+	// Create the JWT claims, which includes the username and expiry time
+	claims := &Claims{
+		UserID: userID.Hex(),
+		StandardClaims: jwt.StandardClaims{
+			// In JWT, the expiry time is expressed as unix milliseconds
+			ExpiresAt: expirationTime.Unix(),
+		},
+	}
 
-	// Отдаем токен клиенту
-	w.Write([]byte(tokenString))
-})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-var JwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
-	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+	//Sign and get the complete encoded token as string
+	return token.SignedString(mySigningKey)
+}
+
+func CheckToken(tokenStr string) (primitive.ObjectID, error) {
+	claims := &Claims{}
+
+	tkn, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return mySigningKey, nil
-	},
-	SigningMethod:       jwt.SigningMethodHS256,
-})
+	})
+
+	if err!=nil {
+		return primitive.ObjectID{}, err
+	}
+
+	if !tkn.Valid {
+		return primitive.ObjectID{}, errors.New("token not valid")
+	}
+	spew.Dump(claims)
+
+	return primitive.ObjectIDFromHex(claims.UserID)
+}

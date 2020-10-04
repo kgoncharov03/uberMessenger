@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -67,10 +68,40 @@ func (dao *DAO) GetUserByID(ctx context.Context, userID primitive.ObjectID) (*Us
 	}
 
 	if len(users) !=1 {
-		panic("len(users) !=0")
+		return nil, errors.New("len(users) !=1")
 	}
 
 	return users[0], nil
+}
+
+func (dao *DAO) GetUserByNickname(ctx context.Context, nickname string) (*User, error) {
+	filter := bson.D{{"nickName", nickname}}
+
+	cursor, err := dao.collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var users []*User
+
+	for cursor.Next(ctx) {
+		var user *User
+		if err:=cursor.Decode(&user); err!=nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if len(users) !=1 {
+		return nil, errors.New("len(users) !=1")
+	}
+
+	return users[0], nil
+}
+
+func (dao *DAO) InsertUser(ctx context.Context, user *User) error {
+	_,err:= dao.collection.InsertOne(ctx, user)
+	return err
 }
 
 func (dao *DAO) InitJunk(ctx context.Context) error{
@@ -98,4 +129,8 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 	}
 
 	return nil
+}
+
+func (dao *DAO) Drop(ctx context.Context) error{
+	return dao.collection.Drop(ctx)
 }

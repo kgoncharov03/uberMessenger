@@ -6,6 +6,8 @@ import (
 
 	"uberMessenger/src/common"
 	"uberMessenger/src/users"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func main() {
@@ -20,8 +22,33 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	dao.Drop(ctx)
 
-	if err:=dao.InitJunk(ctx); err!=nil {
-		log.Fatal(err)
+	users:=[]*users.User{
+		{
+			ID:         primitive.NewObjectID(),
+			FirstName:  "Gregory",
+			SecondName: "Kryloff",
+			NickName:   "nagibator",
+			Password: "1234",
+		},
+		{
+			ID:         primitive.NewObjectID(),
+			FirstName:  "Kirill",
+			SecondName: "Goncharov",
+			NickName:   "nagibator2",
+			Password: "1234",
+		},
+		{
+			ID:         primitive.NewObjectID(),
+			FirstName:  "Danil",
+			SecondName: "Shaikh",
+			NickName:   "my_dick_is_big",
+			Password: "1234",
+		},
+	}
+
+	for _, user:=range users {
+		dao.InsertUser(ctx, user)
 	}
 }
