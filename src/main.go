@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -70,6 +71,9 @@ func (e* Endpoints) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		spew.Dump(r)
 		e.writeHeaders(w)
+		if r.Method==http.MethodOptions {
+			w.WriteHeader(200)
+		}
 
 		_, err:=e.getUserIDFromToken(r)
 		if err!=nil {
@@ -206,7 +210,7 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
+	spew.Dump(chats)
 	bytes, err:=json.Marshal(chats)
 	if err!=nil {
 		e.handleError(w, err)
@@ -257,6 +261,7 @@ func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
+		log.Fatal(err)
 		http.Error(w, err.Error(), 500)
 }
 
