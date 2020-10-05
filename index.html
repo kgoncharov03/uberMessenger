@@ -1,0 +1,25 @@
+<html>
+<head>
+</head>
+<body>
+<h1>Messages</h1>
+<!-- 1 -->
+<div id="results"></div>
+<script type="text/javascript">
+    var resDiv = document.getElementById("results");
+    resDiv.textContent = ""
+
+    // 2
+    var exampleSocket = new WebSocket("ws://localhost:8181/ws/?id=5f7a10fc31f3f13dfdc167d7");
+
+    // 3
+    var update = function(){
+        exampleSocket.onmessage = function (event) {
+            var results = event.data;
+            resDiv.textContent = resDiv.textContent+"\n"+results.toString()
+        }
+    };
+    window.setTimeout(update);
+</script>
+</body>
+</html>

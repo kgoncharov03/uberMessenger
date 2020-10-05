@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/davecgh/go-spew/spew"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -58,8 +57,6 @@ func (dao *DAO) GetUserByID(ctx context.Context, userID primitive.ObjectID) (*Us
 		return nil, err
 	}
 
-	spew.Dump(filter.Map())
-
 	var users []*User
 
 	for cursor.Next(ctx) {
@@ -69,8 +66,6 @@ func (dao *DAO) GetUserByID(ctx context.Context, userID primitive.ObjectID) (*Us
 		}
 		users = append(users, user)
 	}
-
-	spew.Dump(users)
 
 	if len(users) !=1 {
 		return nil, errors.New("len(users) !=1")

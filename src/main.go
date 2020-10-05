@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,16 +21,88 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/gorilla/websocket"
 )
 
 type Endpoints struct {
 	UserDAO *users.DAO
 	ChatDAO *chats.DAO
 	MessageDAO *messages.DAO
+
+	sockets map[primitive.ObjectID]*websocket.Conn
+	upgrader websocket.Upgrader
+	msgChannel chan *messages.Message
+}
+
+func NewEndpoints(
+	UserDAO *users.DAO,
+	ChatDAO *chats.DAO,
+	MessageDAO *messages.DAO,
+	) *Endpoints {
+	endpoints:=&Endpoints{
+		UserDAO:    UserDAO,
+		ChatDAO:    ChatDAO,
+		MessageDAO: MessageDAO,
+		sockets:    make(map[primitive.ObjectID]*websocket.Conn),
+		upgrader:   websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
+		msgChannel: make(chan *messages.Message,100),
+	}
+
+	go endpoints.processMessages()
+	return endpoints
 }
 
 type TokenParams struct {
 	Token string `json:"token"`
+}
+
+func (e *Endpoints) processMessages() {
+	ctx:=context.Background()
+	for {
+		msg:= <-e.msgChannel
+		fmt.Println(msg)
+		chatID:=msg.ChatID
+		chat,err:=e.ChatDAO.GetChatByID(ctx, chatID)
+		if err!=nil {
+			log.Printf("Websocket error: %s", err)
+			continue
+		}
+
+		for _, userID:=range chat.Users{
+			socket, ok:=e.sockets[userID]
+			if !ok {
+				continue
+			}
+			err:=socket.WriteJSON(&msg)
+			if err != nil {
+				log.Printf("Websocket error: %s", err)
+				socket.Close()
+				delete(e.sockets, userID)
+			}
+		}
+	}
+}
+
+func (e *Endpoints) GetSocketHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	userID,err:=primitive.ObjectIDFromHex(id)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		e.handleError(w, err)
+		return
+	}
+
+	e.sockets[userID] = ws
 }
 
 func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -152,6 +225,8 @@ func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  
 		return
 	}
 
+	e.msgChannel <- msg
+	fmt.Print("KEK")
 }
 
 func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
@@ -308,6 +383,14 @@ func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
 		http.Error(w, err.Error(), 500)
 }
 
+func rootHandler(writer http.ResponseWriter, request *http.Request) {
+	body, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		http.Error(writer, "Internal error" + err.Error(), 400)
+	}
+	writer.Write(body)
+}
+
 func main() {
 	ctx:=context.TODO()
 
@@ -332,11 +415,7 @@ func main() {
 		panic(err)
 	}
 
-	e:=&Endpoints{
-		UserDAO:userDAO,
-		ChatDAO:chatDAO,
-		MessageDAO:messageDAO,
-	}
+	e:=NewEndpoints(userDAO, chatDAO, messageDAO)
 
 	router := mux.NewRouter()
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
@@ -346,6 +425,8 @@ func main() {
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
+	router.Handle("/ws/", http.HandlerFunc(e.GetSocketHandler))
+	router.Handle("/test/", http.HandlerFunc(rootHandler))
 
 
 	http.Handle("/",router)

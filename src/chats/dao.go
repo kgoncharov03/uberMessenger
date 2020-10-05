@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -48,6 +49,32 @@ func NewDAO(ctx context.Context, client *mongo.Client) (*DAO, error) {
 		db:db,
 		collection:collection,
 	}, nil
+}
+
+
+func (dao *DAO) GetChatByID(ctx context.Context, chatID primitive.ObjectID) (*Chat, error) {
+	filter := bson.D{{"_id", chatID}}
+
+	cursor, err := dao.collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var chats []*Chat
+
+	for cursor.Next(ctx) {
+		var chat *Chat
+		if err:=cursor.Decode(&chat); err!=nil {
+			return nil, err
+		}
+		chats = append(chats, chat)
+	}
+
+	if len(chats) !=1 {
+		return nil, errors.New("len(chats) !=1")
+	}
+
+	return chats[0], nil
 }
 
 func (dao *DAO) GetChatsByUser(ctx context.Context, userID primitive.ObjectID) ([]*Chat, error) {
