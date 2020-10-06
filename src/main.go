@@ -30,9 +30,9 @@ type Endpoints struct {
 	ChatDAO *chats.DAO
 	MessageDAO *messages.DAO
 
-	sockets map[primitive.ObjectID]*websocket.Conn
-	upgrader websocket.Upgrader
-	msgChannel chan *messages.Message
+	msgSockets  map[primitive.ObjectID]*websocket.Conn
+	msgUpgrader websocket.Upgrader
+	msgChannel  chan *messages.Message
 }
 
 func NewEndpoints(
@@ -44,8 +44,8 @@ func NewEndpoints(
 		UserDAO:    UserDAO,
 		ChatDAO:    ChatDAO,
 		MessageDAO: MessageDAO,
-		sockets:    make(map[primitive.ObjectID]*websocket.Conn),
-		upgrader:   websocket.Upgrader{
+		msgSockets: make(map[primitive.ObjectID]*websocket.Conn),
+		msgUpgrader:   websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
@@ -74,7 +74,7 @@ func (e *Endpoints) processMessages() {
 		}
 
 		for _, userID:=range chat.Users{
-			socket, ok:=e.sockets[userID]
+			socket, ok:=e.msgSockets[userID]
 			if !ok {
 				continue
 			}
@@ -82,13 +82,13 @@ func (e *Endpoints) processMessages() {
 			if err != nil {
 				log.Printf("Websocket error: %s", err)
 				socket.Close()
-				delete(e.sockets, userID)
+				delete(e.msgSockets, userID)
 			}
 		}
 	}
 }
 
-func (e *Endpoints) GetSocketHandler(w http.ResponseWriter, r *http.Request) {
+func (e *Endpoints) GetMessageSocketHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	userID,err:=primitive.ObjectIDFromHex(id)
 	if err!=nil {
@@ -102,11 +102,29 @@ func (e *Endpoints) GetSocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e.sockets[userID] = ws
+	e.msgSockets[userID] = ws
 }
 
+func (e *Endpoints) GetMe(w http.ResponseWriter, r *http.Request) {
+	userID,err:=e.getUserIDFromToken(r)
+	if err!=nil {
+		e.handleError(w, errors.New("unauthorized"))
+		return
+	}
+
+	user,err:=e.UserDAO.GetUserByID(context.Background(), userID)
+	bytes, err:=json.Marshal(user)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+
+}
 func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
-	spew.Dump(r)
 	e.writeHeaders(w)
 
 	nickname:=r.URL.Query().Get("nickname")
@@ -420,12 +438,14 @@ func main() {
 	router := mux.NewRouter()
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/me/", e.Middleware(http.HandlerFunc(e.GetMe))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/usersByNickname/", e.Middleware(http.HandlerFunc(e.GetUserByNicknameHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
-	router.Handle("/ws/", http.HandlerFunc(e.GetSocketHandler))
+	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
+	//router.Handle("/chatWs/")
 	router.Handle("/test/", http.HandlerFunc(rootHandler))
 
 
