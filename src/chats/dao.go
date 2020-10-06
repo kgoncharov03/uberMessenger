@@ -3,7 +3,6 @@ package chats
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"go.mongodb.org/mongo-driver/bson"
@@ -111,60 +110,3 @@ func (dao *DAO) AddChat(ctx context.Context, chat *Chat) error {
 func (dao *DAO) Drop(ctx context.Context) error{
 	return dao.collection.Drop(ctx)
 }
-
-func (dao *DAO) InitJunk(ctx context.Context) error{
-	userID1,err:=primitive.ObjectIDFromHex("5f7a10fc31f3f13dfdc167d6")
-	if err!=nil {
-		panic(err)
-	}
-
-	userID2,err:=primitive.ObjectIDFromHex("5f7a10fc31f3f13dfdc167d7")
-	if err!=nil {
-		panic(err)
-	}
-
-	userID3,err:=primitive.ObjectIDFromHex("5f7a10fc31f3f13dfdc167d8")
-	if err!=nil {
-		panic(err)
-	}
-
-	chats:=[]*Chat{
-		{
-			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
-			Users: []primitive.ObjectID{
-				userID1, userID2,
-			},
-		},
-		{
-			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
-			Users: []primitive.ObjectID{
-				userID1, userID3,
-			},
-		},
-		{
-			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
-			Users: []primitive.ObjectID{
-				userID1, userID2, userID3,
-			},
-		},
-		{
-			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
-			Users: []primitive.ObjectID{
-				userID2, userID3,
-			},
-		},
-	}
-
-	dao.Drop(ctx)
-
-	for _, chat:=range chats {
-		dao.AddChat(ctx, chat)
-	}
-
-	return nil
-}
-

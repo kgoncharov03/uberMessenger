@@ -334,6 +334,43 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	e.chatChannel <- chat
 }
 
+type AddAttachmentJSONRequest struct {
+	Data []byte `json:"data"`
+}
+
+func (e *Endpoints) UploadAttachmentJSONHandler(w http.ResponseWriter, r *http.Request) {
+	ctx:=context.Background()
+	decoder := json.NewDecoder(r.Body)
+	var params AddAttachmentJSONRequest
+	err := decoder.Decode(&params)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	att:=&storage.Attachment{
+		ID:      primitive.NewObjectID(),
+		Content: params.Data,
+	}
+
+	err=e.AttachmentDAO.InsertAttachment(ctx, att)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	resp:=&AddAttachmentResponse{ID:att.ID.Hex()}
+
+	bytes, err=json.Marshal(resp)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
 type AddAttachmentResponse struct {
 	ID string `json:"id"`
 }
@@ -369,6 +406,32 @@ func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Reque
 	w.Write(bytes)
 }
 
+
+func (e *Endpoints) GetAttachmentJSONHandler(w http.ResponseWriter, r *http.Request) {
+	ctx:=context.Background()
+	id := r.URL.Query().Get("id")
+	attID,err:=primitive.ObjectIDFromHex(id)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	att,err:= e.AttachmentDAO.GetAttachmentByID(ctx, attID)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	bytes, err:=json.Marshal(att)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+
+}
 func (e *Endpoints) GetAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 	ctx:=context.Background()
 	id := r.URL.Query().Get("id")
@@ -610,6 +673,7 @@ func main() {
 
 	router.Handle("/addAttachment", e.Middleware(http.HandlerFunc(e.UploadAttachmentHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/attachments/", e.Middleware(http.HandlerFunc(e.GetAttachmentHandler))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/getAttJSON", e.Middleware(http.HandlerFunc(e.GetAttachmentJSONHandler))).Methods(http.MethodGet, http.MethodOptions)
 
 	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
 	router.Handle("/chatWs/", http.HandlerFunc(e.GetChatSocketHandler))

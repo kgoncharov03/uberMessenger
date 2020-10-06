@@ -104,33 +104,6 @@ func (dao *DAO) InsertUser(ctx context.Context, user *User) error {
 	return err
 }
 
-func (dao *DAO) InitJunk(ctx context.Context) error{
-	users:=[]*User{
-		{
-			ID:         primitive.NewObjectID(),
-			FirstName:  "Gregory",
-			SecondName: "Kryloff",
-			NickName:   "nagibator",
-		},
-		{
-			ID:         primitive.NewObjectID(),
-			FirstName:  "Kirill",
-			SecondName: "Goncharov",
-			NickName:   "nagibator2",
-		},
-	}
-	
-	if _, err:= dao.collection.InsertOne(ctx, users[0]); err!=nil {
-		return err
-	}
-
-	if _, err:= dao.collection.InsertOne(ctx, users[1]); err!=nil {
-		return err
-	}
-
-	return nil
-}
-
 func (dao *DAO) NickNameExists(ctx context.Context, nickname string) (bool, error) {
 	filter := bson.D{{"nickName", nickname}}
 
