@@ -484,8 +484,8 @@ func main() {
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
-	router.Handle("/messageWs/", e.Middleware(http.HandlerFunc(e.GetMessageSocketHandler)))
-	router.Handle("/chatWs/", e.Middleware(http.HandlerFunc(e.GetChatSocketHandler)))
+	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
+	router.Handle("/chatWs/", http.HandlerFunc(e.GetChatSocketHandler))
 	router.Handle("/test/", http.HandlerFunc(rootHandler))
 
 
