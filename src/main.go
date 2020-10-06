@@ -33,6 +33,10 @@ type Endpoints struct {
 	msgSockets  map[primitive.ObjectID]*websocket.Conn
 	msgUpgrader websocket.Upgrader
 	msgChannel  chan *messages.Message
+
+	chatSockets  map[primitive.ObjectID]*websocket.Conn
+	chatUpgrader websocket.Upgrader
+	chatChannel  chan *chats.Chat
 }
 
 func NewEndpoints(
@@ -54,6 +58,8 @@ func NewEndpoints(
 	}
 
 	go endpoints.processMessages()
+	go endpoints.processChats()
+
 	return endpoints
 }
 
@@ -65,7 +71,6 @@ func (e *Endpoints) processMessages() {
 	ctx:=context.Background()
 	for {
 		msg:= <-e.msgChannel
-		fmt.Println(msg)
 		chatID:=msg.ChatID
 		chat,err:=e.ChatDAO.GetChatByID(ctx, chatID)
 		if err!=nil {
@@ -86,6 +91,41 @@ func (e *Endpoints) processMessages() {
 			}
 		}
 	}
+}
+
+func (e *Endpoints) processChats() {
+	for {
+		chat:= <-e.chatChannel
+		for _, userID:=range chat.Users{
+			socket, ok:=e.chatSockets[userID]
+			if !ok {
+				continue
+			}
+			err:=socket.WriteJSON(&chat)
+			if err != nil {
+				log.Printf("Websocket error: %s", err)
+				socket.Close()
+				delete(e.chatSockets, userID)
+			}
+		}
+	}
+}
+
+func (e *Endpoints) GetChatSocketHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	userID,err:=primitive.ObjectIDFromHex(id)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
+	if err != nil {
+		e.handleError(w, err)
+		return
+	}
+
+	e.chatSockets[userID] = ws
 }
 
 func (e *Endpoints) GetMessageSocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +200,6 @@ func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func (e* Endpoints) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		spew.Dump(r)
 		e.writeHeaders(w)
 		if r.Method==http.MethodOptions {
 			w.WriteHeader(200)
@@ -244,7 +283,6 @@ func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  
 	}
 
 	e.msgChannel <- msg
-	fmt.Print("KEK")
 }
 
 func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
@@ -277,6 +315,8 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 		e.handleError(w, err)
 		return
 	}
+
+	e.chatChannel <- chat
 }
 
 func (e *Endpoints) GetUserByNicknameHandler(w http.ResponseWriter, r *http.Request) {
@@ -444,8 +484,8 @@ func main() {
 	router.Handle("/messages/", e.Middleware(http.HandlerFunc(e.GetMessages))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/addChat", e.Middleware(http.HandlerFunc(e.AddChatHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
-	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
-	//router.Handle("/chatWs/")
+	router.Handle("/messageWs/", e.Middleware(http.HandlerFunc(e.GetMessageSocketHandler)))
+	router.Handle("/chatWs/", e.Middleware(http.HandlerFunc(e.GetChatSocketHandler)))
 	router.Handle("/test/", http.HandlerFunc(rootHandler))
 
 
