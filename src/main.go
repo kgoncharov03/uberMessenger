@@ -286,7 +286,7 @@ func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  
 		From:   fromID,
 		ChatID: chatID,
 		Text:   params.Text,
-		Time:   time.Now(),
+		Time:   time.Now().UnixNano(),
 	}
 
 	err = e.MessageDAO.AddMessage(context.Background(), msg)

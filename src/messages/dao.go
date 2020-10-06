@@ -2,7 +2,6 @@ package messages
 
 import (
 	"context"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -77,50 +76,6 @@ func (dao *DAO) GetMessagesByChat(ctx context.Context, chatID primitive.ObjectID
 
 func (dao *DAO) AddMessage(ctx context.Context, msg *Message) error {
 	if _, err:= dao.collection.InsertOne(ctx, msg); err!=nil {
-		return err
-	}
-
-	return nil
-}
-
-func (dao *DAO) InitJunk(ctx context.Context) error{
-	userID1,err:=primitive.ObjectIDFromHex("5f78829a44202661a33d787a")
-	if err!=nil {
-		return nil
-	}
-
-	userID2,err:=primitive.ObjectIDFromHex("5f78829a44202661a33d787b")
-	if err!=nil {
-		return nil
-	}
-
-	chat,err:=primitive.ObjectIDFromHex("5f788850ddf089e25fa8ada6")
-	if err!=nil {
-		return nil
-	}
-
-	msgs:=[]*Message{
-		{
-			ID:     primitive.NewObjectID(),
-			From:   userID2,
-			ChatID: chat,
-			Text:   "300",
-			Time:   time.Now().Add(-time.Hour),
-		},
-		{
-			ID:     primitive.NewObjectID(),
-			From:   userID1,
-			ChatID: chat,
-			Text:   "Отсоси у тракториста",
-			Time:   time.Now(),
-		},
-	}
-
-	if _, err:= dao.collection.InsertOne(ctx, msgs[0]); err!=nil {
-		return err
-	}
-
-	if _, err:= dao.collection.InsertOne(ctx, msgs[1]); err!=nil {
 		return err
 	}
 

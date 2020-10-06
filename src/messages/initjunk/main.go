@@ -66,14 +66,14 @@ func main() {
 			From:   userID1,
 			ChatID: chatID1,
 			Text:   "ПИСЯ",
-			Time:   time.Now(),
+			Time:   time.Now().UnixNano(),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID2,
 			ChatID: chatID1,
 			Text:   "СИСЯ",
-			Time:   time.Now().Add(time.Hour),
+			Time:   time.Now().Add(time.Hour).UnixNano(),
 		},
 
 		{
@@ -81,14 +81,14 @@ func main() {
 			From:   userID1,
 			ChatID: chatID2,
 			Text:   "ХУЙ",
-			Time:   time.Now(),
+			Time:   time.Now().UnixNano(),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID3,
 			ChatID: chatID2,
 			Text:   "ПИЗДА",
-			Time:   time.Now().Add(time.Hour),
+			Time:   time.Now().Add(time.Hour).UnixNano(),
 		},
 
 		{
@@ -96,14 +96,14 @@ func main() {
 			From:   userID2,
 			ChatID: chatID3,
 			Text:   "АААА",
-			Time:   time.Now(),
+			Time:   time.Now().UnixNano(),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID3,
 			ChatID: chatID3,
 			Text:   "ББББ",
-			Time:   time.Now().Add(time.Hour),
+			Time:   time.Now().Add(time.Hour).UnixNano(),
 		},
 
 		{
@@ -111,23 +111,25 @@ func main() {
 			From:   userID2,
 			ChatID: chatID4,
 			Text:   "ЫЫЫ",
-			Time:   time.Now(),
+			Time:   time.Now().UnixNano(),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID3,
 			ChatID: chatID4,
 			Text:   "ФФФФ",
-			Time:   time.Now().Add(time.Hour),
+			Time:   time.Now().Add(time.Hour).UnixNano(),
 		},
 		{
 			ID:     primitive.NewObjectID(),
 			From:   userID1,
 			ChatID: chatID4,
 			Text:   "АЫЫЫЫ",
-			Time:   time.Now().Add(time.Hour*2),
+			Time:   time.Now().Add(time.Hour*2).UnixNano(),
 		},
 	}
+
+	dao.Drop(ctx)
 
 
 	for _, msg:=range msgs {
