@@ -131,6 +131,31 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 	return nil
 }
 
+func (dao *DAO) NickNameExists(ctx context.Context, nickname string) (bool, error) {
+	filter := bson.D{{"nickName", nickname}}
+
+	cursor, err := dao.collection.Find(context.TODO(), filter)
+	if err != nil {
+		return false, err
+	}
+
+	var users []*User
+
+	for cursor.Next(ctx) {
+		var user *User
+		if err:=cursor.Decode(&user); err!=nil {
+			return false, err
+		}
+		users = append(users, user)
+	}
+
+	if len(users) >0 {
+		return true, nil
+	}
+
+	return false, err
+}
+
 func (dao *DAO) Drop(ctx context.Context) error{
 	return dao.collection.Drop(ctx)
 }

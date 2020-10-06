@@ -258,6 +258,7 @@ type AddMessageParams struct {
 	FromID string `json:"fromID"`
 	ChatID string `json:"chatID"`
 	Text string `json:"text"`
+	AttachmentLink *messages.AttachmentLink `json:"attachmentLink,omitempty"`
 }
 
 func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  {
@@ -287,6 +288,7 @@ func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  
 		ChatID: chatID,
 		Text:   params.Text,
 		Time:   time.Now().UnixNano(),
+		AttachmentLink:params.AttachmentLink,
 	}
 
 	err = e.MessageDAO.AddMessage(context.Background(), msg)
@@ -423,13 +425,11 @@ func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	bytes, err:=json.Marshal(user)
 	if err!=nil {
 		e.handleError(w, err)
 		return
 	}
-
 
 	w.WriteHeader(200)
 	w.Write(bytes)
@@ -493,6 +493,57 @@ func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bytes, err:=json.Marshal(msgs)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
+
+type RegisterParams struct {
+	FirstName string`json:"firstName"`
+	SecondName string `json:"secondName"`
+	NickName string `json:"nickName"`
+	Password string ` json:"password"`
+}
+
+func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var params RegisterParams
+	err := decoder.Decode(&params)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+	ctx:=context.Background()
+
+	exists, err:=e.UserDAO.NickNameExists(ctx, params.NickName)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	if exists {
+		http.Error(w, "nickname already exists", http.StatusBadRequest)
+		return
+	}
+
+	newUser:=&users.User{
+		ID:         primitive.NewObjectID(),
+		FirstName:  params.FirstName,
+		SecondName: params.SecondName,
+		NickName:   params.NickName,
+		Password:   params.Password,
+	}
+
+	err=e.UserDAO.InsertUser(ctx, newUser)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+	bytes, err:=json.Marshal(newUser)
 	if err!=nil {
 		e.handleError(w, err)
 		return
