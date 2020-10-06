@@ -661,6 +661,7 @@ func main() {
 	e:=NewEndpoints(userDAO, chatDAO, messageDAO, attDAO)
 
 	router := mux.NewRouter()
+	router.Handle("/register", e.Middleware(http.HandlerFunc(e.RegisterHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/me/", e.Middleware(http.HandlerFunc(e.GetMe))).Methods(http.MethodGet, http.MethodOptions)
