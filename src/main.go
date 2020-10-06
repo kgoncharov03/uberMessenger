@@ -672,6 +672,8 @@ func main() {
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
 
 	router.Handle("/addAttachment", e.Middleware(http.HandlerFunc(e.UploadAttachmentHandler))).Methods(http.MethodPost, http.MethodOptions)
+	router.Handle("/addAttachmentJSON", e.Middleware(http.HandlerFunc(e.UploadAttachmentJSONHandler))).Methods(http.MethodPost, http.MethodOptions)
+
 	router.Handle("/attachments/", e.Middleware(http.HandlerFunc(e.GetAttachmentHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/getAttJSON", e.Middleware(http.HandlerFunc(e.GetAttachmentJSONHandler))).Methods(http.MethodGet, http.MethodOptions)
 
