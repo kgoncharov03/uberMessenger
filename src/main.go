@@ -361,7 +361,7 @@ func (e *Endpoints) UploadAttachmentJSONHandler(w http.ResponseWriter, r *http.R
 
 	resp:=&AddAttachmentResponse{ID:att.ID.Hex()}
 
-	bytes, err=json.Marshal(resp)
+	bytes, err:=json.Marshal(resp)
 	if err!=nil {
 		e.handleError(w, err)
 		return
