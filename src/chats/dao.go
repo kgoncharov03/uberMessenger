@@ -161,7 +161,6 @@ func (dao *DAO) InitJunk(ctx context.Context) error{
 
 	dao.Drop(ctx)
 
-
 	for _, chat:=range chats {
 		dao.AddChat(ctx, chat)
 	}
