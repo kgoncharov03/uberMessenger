@@ -158,6 +158,43 @@ func (e *Endpoints) GetMessageSocketHandler(w http.ResponseWriter, r *http.Reque
 	e.msgSockets[userID] = ws
 }
 
+func (e *Endpoints) GetUsersByChatHandler(w http.ResponseWriter, r *http.Request) {
+	ctx:=context.Background()
+	chatIDParam := r.URL.Query().Get("chatId")
+
+	chatID,err:=primitive.ObjectIDFromHex(chatIDParam)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	chat, err:=e.ChatDAO.GetChatByID(ctx, chatID)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	var users []*users.User
+
+	for _, userID:=range chat.Users {
+		user,err:=e.UserDAO.GetUserByID(ctx, userID)
+		if err!=nil {
+			e.handleError(w, err)
+			return
+		}
+
+		users = append(users, user)
+	}
+
+	bytes, err:=json.Marshal(users)
+	if err!=nil {
+		e.handleError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write(bytes)
+}
 func (e *Endpoints) GetMe(w http.ResponseWriter, r *http.Request) {
 	userID,err:=e.getUserIDFromToken(r)
 	if err!=nil {
@@ -508,7 +545,6 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 		e.handleError(w, err)
 		return
 	}
-	spew.Dump(userID)
 
 	chats,err:= e.ChatDAO.GetChatsByUser(ctx, userID)
 	if err!=nil {
@@ -665,6 +701,7 @@ func main() {
 	router.Handle("/register", e.Middleware(http.HandlerFunc(e.RegisterHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/usersByChat/", http.HandlerFunc(e.GetUsersByChatHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/me/", e.Middleware(http.HandlerFunc(e.GetMe))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/usersByNickname/", e.Middleware(http.HandlerFunc(e.GetUserByNicknameHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet, http.MethodOptions)
