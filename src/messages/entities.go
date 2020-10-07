@@ -7,6 +7,8 @@ import (
 type AttachmentLink struct {
 	Type string `bson:"type" json:"type"`
 	AttachmentID primitive.ObjectID `bson:"attachmentId" json:"attachmentId"`
+	Ext string `bson:"ext" json:"ext"`
+	Name string `bson:"name" json:"name"`
 }
 
 type Message struct {
