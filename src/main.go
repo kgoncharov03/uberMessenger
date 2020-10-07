@@ -628,28 +628,28 @@ func main() {
 
 	client, err := common.NewClient()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer client.Disconnect(ctx)
 
 	userDAO,err:= users.NewDAO(ctx, client)
 	if err!=nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	chatDAO, err:=chats.NewDAO(ctx, client)
 	if err!=nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	messageDAO, err:=messages.NewDAO(ctx, client)
 	if err!=nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	attDAO, err:=storage.NewDAO(ctx, client)
 	if err!=nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	e:=NewEndpoints(userDAO, chatDAO, messageDAO, attDAO)
@@ -677,5 +677,5 @@ func main() {
 	http.Handle("/",router)
 
 	fmt.Println("Server is listening...")
-	http.ListenAndServe(":8181", nil)
+	log.Fatal(http.ListenAndServe(":8181", nil))
 }
