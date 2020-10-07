@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"log"
+	"strconv"
 	"time"
 
 	"uberMessenger/src/chats"
 	"uberMessenger/src/common"
+	"uberMessenger/src/messages"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -42,28 +44,28 @@ func main() {
 	chats:=[]*chats.Chat{
 		{
 			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
+			LastMessageTime: time.Now().UnixNano(),
 			Users: []primitive.ObjectID{
 				userID1, userID2,
 			},
 		},
 		{
 			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
+			LastMessageTime: time.Now().UnixNano(),
 			Users: []primitive.ObjectID{
 				userID1, userID3,
 			},
 		},
 		{
 			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
+			LastMessageTime: time.Now().UnixNano(),
 			Users: []primitive.ObjectID{
 				userID1, userID2, userID3,
 			},
 		},
 		{
 			ID:              primitive.NewObjectID(),
-			LastMessageTime: time.Now(),
+			LastMessageTime: time.Now().UnixNano(),
 			Users: []primitive.ObjectID{
 				userID2, userID3,
 			},
@@ -72,8 +74,26 @@ func main() {
 
 	dao.Drop(ctx)
 
-	for _, chat:=range chats {
-		dao.AddChat(ctx, chat)
+
+
+	msgDAO,err := messages.NewDAO(ctx, client)
+	if err != nil {
+		log.Fatal(err)
 	}
 
+	msgDAO.Drop(ctx)
+
+	for i, chat:=range chats {
+		dao.AddChat(ctx, chat)
+		msg:=&messages.Message{
+			ID:             primitive.NewObjectID(),
+			From:           chat.Users[0],
+			ChatID:         chat.Users[1],
+			Text:           "Hello" + strconv.Itoa(i),
+			Time:           time.Now().UnixNano(),
+			AttachmentLink: nil,
+		}
+
+		msgDAO.AddMessage(ctx, msg)
+	}
 }

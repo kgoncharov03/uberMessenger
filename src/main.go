@@ -358,7 +358,7 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	chat:=&chats.Chat{
 		ID:              primitive.NewObjectID(),
-		LastMessageTime: time.Now(),
+		LastMessageTime: time.Now().UnixNano(),
 		Users:           userIDs,
 		Name:            params.Name,
 	}
@@ -372,45 +372,9 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	e.chatChannel <- chat
 }
 
-type AddAttachmentJSONRequest struct {
-	Data []byte `json:"data"`
-}
-
-func (e *Endpoints) UploadAttachmentJSONHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
-	decoder := json.NewDecoder(r.Body)
-	var params AddAttachmentJSONRequest
-	err := decoder.Decode(&params)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	att:=&storage.Attachment{
-		ID:      primitive.NewObjectID(),
-		Content: params.Data,
-	}
-
-	err=e.AttachmentDAO.InsertAttachment(ctx, att)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	resp:=&AddAttachmentResponse{ID:att.ID.Hex()}
-
-	bytes, err:=json.Marshal(resp)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
-}
 
 type AddAttachmentResponse struct {
-	ID string `json:"id"`
+	ID primitive.ObjectID `json:"id"`
 }
 
 func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -432,7 +396,7 @@ func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	resp:=&AddAttachmentResponse{ID:att.ID.Hex()}
+	resp:=&AddAttachmentResponse{ID:att.ID}
 
 	bytes, err=json.Marshal(resp)
 	if err!=nil {
@@ -442,32 +406,6 @@ func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Reque
 
 	w.WriteHeader(200)
 	w.Write(bytes)
-}
-
-func (e *Endpoints) GetAttachmentJSONHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
-	id := r.URL.Query().Get("id")
-	attID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	att,err:= e.AttachmentDAO.GetAttachmentByID(ctx, attID)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	bytes, err:=json.Marshal(att)
-	if err!=nil {
-		e.handleError(w, err)
-		return
-	}
-
-	w.WriteHeader(200)
-	w.Write(bytes)
-
 }
 
 func (e *Endpoints) GetAttachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -551,7 +489,14 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	spew.Dump(chats)
+	for i:=0; i<len(chats); i++ {
+		chats[i],err = e.enrichChat(ctx, chats[i])
+		if err!=nil {
+			e.handleError(w, err)
+			return
+		}
+	}
+
 	bytes, err:=json.Marshal(chats)
 	if err!=nil {
 		e.handleError(w, err)
@@ -657,12 +602,25 @@ func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
 		http.Error(w, err.Error(), 500)
 }
 
-func wsTestHandler(writer http.ResponseWriter, request *http.Request) {
-	body, err := ioutil.ReadFile("index.html")
-	if err != nil {
-		http.Error(writer, "Internal error" + err.Error(), 400)
+func (e *Endpoints) enrichChat(ctx context.Context, chat *chats.Chat) (*chats.Chat, error) {
+	msg, err:=e.MessageDAO.GetMessagesByChat(ctx, chat.ID, 1,0)
+	if err!=nil {
+		return nil,err
 	}
-	writer.Write(body)
+
+	if len(msg)==0 {
+		return chat, nil
+	}
+
+	if msg[0].AttachmentLink!=nil && msg[0].Text=="" {
+		chat.LastMessage = "attachment"
+	} else {
+		chat.LastMessage = msg[0].Text
+	}
+
+	chat.LastMessageTime = msg[0].Time
+
+	return chat, nil
 }
 
 func main() {
@@ -710,14 +668,10 @@ func main() {
 	router.Handle("/addMessage", e.Middleware(http.HandlerFunc(e.AddMessageHandler))).Methods(http.MethodPost, http.MethodOptions)
 
 	router.Handle("/addAttachment", e.Middleware(http.HandlerFunc(e.UploadAttachmentHandler))).Methods(http.MethodPost, http.MethodOptions)
-	router.Handle("/addAttachmentJSON", e.Middleware(http.HandlerFunc(e.UploadAttachmentJSONHandler))).Methods(http.MethodPost, http.MethodOptions)
-
 	router.Handle("/attachments/", e.Middleware(http.HandlerFunc(e.GetAttachmentHandler))).Methods(http.MethodGet, http.MethodOptions)
-	router.Handle("/getAttJSON", e.Middleware(http.HandlerFunc(e.GetAttachmentJSONHandler))).Methods(http.MethodGet, http.MethodOptions)
 
 	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
 	router.Handle("/chatWs/", http.HandlerFunc(e.GetChatSocketHandler))
-	router.Handle("/test/", http.HandlerFunc(wsTestHandler))
 
 
 	http.Handle("/",router)
