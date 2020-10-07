@@ -444,7 +444,6 @@ func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Reque
 	w.Write(bytes)
 }
 
-
 func (e *Endpoints) GetAttachmentJSONHandler(w http.ResponseWriter, r *http.Request) {
 	ctx:=context.Background()
 	id := r.URL.Query().Get("id")
@@ -470,6 +469,7 @@ func (e *Endpoints) GetAttachmentJSONHandler(w http.ResponseWriter, r *http.Requ
 	w.Write(bytes)
 
 }
+
 func (e *Endpoints) GetAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 	ctx:=context.Background()
 	id := r.URL.Query().Get("id")
@@ -508,7 +508,6 @@ func (e *Endpoints) GetUserByNicknameHandler(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(200)
 	w.Write(bytes)
 }
-
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
@@ -701,7 +700,7 @@ func main() {
 	router.Handle("/register", e.Middleware(http.HandlerFunc(e.RegisterHandler))).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
-	router.Handle("/usersByChat/", http.HandlerFunc(e.GetUsersByChatHandler)).Methods(http.MethodGet, http.MethodOptions)
+	router.Handle("/usersByChat/", e.Middleware(http.HandlerFunc(e.GetUsersByChatHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/me/", e.Middleware(http.HandlerFunc(e.GetMe))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/usersByNickname/", e.Middleware(http.HandlerFunc(e.GetUserByNicknameHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/chats/", e.Middleware(http.HandlerFunc(e.GetChatsByUser))).Methods(http.MethodGet, http.MethodOptions)
