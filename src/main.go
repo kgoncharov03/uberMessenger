@@ -252,6 +252,7 @@ func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
 
 type AddChatParams struct {
 	Users []string `json:"users"`
+	Name string `json:"name"`
 }
 
 type AddMessageParams struct {
@@ -322,7 +323,7 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 		ID:              primitive.NewObjectID(),
 		LastMessageTime: time.Now(),
 		Users:           userIDs,
-		Name:            "",
+		Name:            params.Name,
 	}
 
 	err=e.ChatDAO.AddChat(context.Background(), chat)
