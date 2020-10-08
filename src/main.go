@@ -555,6 +555,9 @@ type RegisterParams struct {
 
 func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
+	if r.Method==http.MethodOptions {
+		w.WriteHeader(200)
+	}
 	decoder := json.NewDecoder(r.Body)
 	var params RegisterParams
 	err := decoder.Decode(&params)
