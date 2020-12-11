@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func NewClient() (*mongo.Client, error){
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://root:root@45.143.138.200:27017"))
+func NewClient() (*mongo.Client, error) {
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://root:root@34.90.137.37:27017"))
 	if err != nil {
 		return nil, err
 	}
