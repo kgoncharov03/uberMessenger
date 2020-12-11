@@ -551,7 +551,7 @@ type RegisterParams struct {
 }
 
 func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("revieve register query")
+	fmt.Println("recieve register query")
 	e.writeHeaders(w)
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(200)
@@ -657,7 +657,7 @@ func main() {
 	e := NewEndpoints(userDAO, chatDAO, messageDAO, attDAO)
 
 	router := mux.NewRouter()
-	router.Handle("/register", http.HandlerFunc(e.RegisterHandler)).Methods(http.MethodPost, http.MethodOptions)
+	router.Handle("/register/", http.HandlerFunc(e.RegisterHandler)).Methods(http.MethodPost, http.MethodOptions)
 	router.Handle("/getToken/", http.HandlerFunc(e.GetTokenHandler)).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/users/", e.Middleware(http.HandlerFunc(e.GetUserByIDHandler))).Methods(http.MethodGet, http.MethodOptions)
 	router.Handle("/usersByChat/", e.Middleware(http.HandlerFunc(e.GetUsersByChatHandler))).Methods(http.MethodGet, http.MethodOptions)
