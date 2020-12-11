@@ -27,9 +27,9 @@ import (
 )
 
 type Endpoints struct {
-	UserDAO *users.DAO
-	ChatDAO *chats.DAO
-	MessageDAO *messages.DAO
+	UserDAO       *users.DAO
+	ChatDAO       *chats.DAO
+	MessageDAO    *messages.DAO
 	AttachmentDAO *storage.DAO
 
 	msgSockets  map[primitive.ObjectID]*websocket.Conn
@@ -46,28 +46,28 @@ func NewEndpoints(
 	ChatDAO *chats.DAO,
 	MessageDAO *messages.DAO,
 	AttachmentDAO *storage.DAO,
-	) *Endpoints {
-	endpoints:=&Endpoints{
-		UserDAO:    UserDAO,
-		ChatDAO:    ChatDAO,
-		MessageDAO: MessageDAO,
-		AttachmentDAO:AttachmentDAO,
+) *Endpoints {
+	endpoints := &Endpoints{
+		UserDAO:       UserDAO,
+		ChatDAO:       ChatDAO,
+		MessageDAO:    MessageDAO,
+		AttachmentDAO: AttachmentDAO,
 
 		msgSockets: make(map[primitive.ObjectID]*websocket.Conn),
-		msgUpgrader:   websocket.Upgrader{
+		msgUpgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
 		},
-		msgChannel: make(chan *messages.Message,100),
+		msgChannel: make(chan *messages.Message, 100),
 
 		chatSockets: make(map[primitive.ObjectID]*websocket.Conn),
-		chatUpgrader:   websocket.Upgrader{
+		chatUpgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				return true
 			},
 		},
-		chatChannel: make(chan *chats.Chat,100),
+		chatChannel: make(chan *chats.Chat, 100),
 	}
 
 	go endpoints.processMessages()
@@ -81,22 +81,22 @@ type TokenParams struct {
 }
 
 func (e *Endpoints) processMessages() {
-	ctx:=context.Background()
+	ctx := context.Background()
 	for {
-		msg:= <-e.msgChannel
-		chatID:=msg.ChatID
-		chat,err:=e.ChatDAO.GetChatByID(ctx, chatID)
-		if err!=nil {
+		msg := <-e.msgChannel
+		chatID := msg.ChatID
+		chat, err := e.ChatDAO.GetChatByID(ctx, chatID)
+		if err != nil {
 			log.Printf("Websocket error: %s", err)
 			continue
 		}
 
-		for _, userID:=range chat.Users{
-			socket, ok:=e.msgSockets[userID]
+		for _, userID := range chat.Users {
+			socket, ok := e.msgSockets[userID]
 			if !ok {
 				continue
 			}
-			err:=socket.WriteJSON(&msg)
+			err := socket.WriteJSON(&msg)
 			if err != nil {
 				log.Printf("Websocket error: %s", err)
 				socket.Close()
@@ -108,13 +108,13 @@ func (e *Endpoints) processMessages() {
 
 func (e *Endpoints) processChats() {
 	for {
-		chat:= <-e.chatChannel
-		for _, userID:=range chat.Users{
-			socket, ok:=e.chatSockets[userID]
+		chat := <-e.chatChannel
+		for _, userID := range chat.Users {
+			socket, ok := e.chatSockets[userID]
 			if !ok {
 				continue
 			}
-			err:=socket.WriteJSON(&chat)
+			err := socket.WriteJSON(&chat)
 			if err != nil {
 				log.Printf("Websocket error: %s", err)
 				socket.Close()
@@ -126,8 +126,8 @@ func (e *Endpoints) processChats() {
 
 func (e *Endpoints) GetChatSocketHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	userID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
+	userID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -143,8 +143,8 @@ func (e *Endpoints) GetChatSocketHandler(w http.ResponseWriter, r *http.Request)
 
 func (e *Endpoints) GetMessageSocketHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
-	userID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
+	userID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -159,26 +159,26 @@ func (e *Endpoints) GetMessageSocketHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (e *Endpoints) GetUsersByChatHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
+	ctx := context.Background()
 	chatIDParam := r.URL.Query().Get("chatId")
 
-	chatID,err:=primitive.ObjectIDFromHex(chatIDParam)
-	if err!=nil {
+	chatID, err := primitive.ObjectIDFromHex(chatIDParam)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	chat, err:=e.ChatDAO.GetChatByID(ctx, chatID)
-	if err!=nil {
+	chat, err := e.ChatDAO.GetChatByID(ctx, chatID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
 	var users []*users.User
 
-	for _, userID:=range chat.Users {
-		user,err:=e.UserDAO.GetUserByID(ctx, userID)
-		if err!=nil {
+	for _, userID := range chat.Users {
+		user, err := e.UserDAO.GetUserByID(ctx, userID)
+		if err != nil {
 			e.handleError(w, err)
 			return
 		}
@@ -186,8 +186,8 @@ func (e *Endpoints) GetUsersByChatHandler(w http.ResponseWriter, r *http.Request
 		users = append(users, user)
 	}
 
-	bytes, err:=json.Marshal(users)
-	if err!=nil {
+	bytes, err := json.Marshal(users)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -196,51 +196,50 @@ func (e *Endpoints) GetUsersByChatHandler(w http.ResponseWriter, r *http.Request
 	w.Write(bytes)
 }
 func (e *Endpoints) GetMe(w http.ResponseWriter, r *http.Request) {
-	userID,err:=e.getUserIDFromToken(r)
-	if err!=nil {
+	userID, err := e.getUserIDFromToken(r)
+	if err != nil {
 		e.handleError(w, errors.New("unauthorized"))
 		return
 	}
 
-	user,err:=e.UserDAO.GetUserByID(context.Background(), userID)
-	bytes, err:=json.Marshal(user)
-	if err!=nil {
+	user, err := e.UserDAO.GetUserByID(context.Background(), userID)
+	bytes, err := json.Marshal(user)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
-
 
 	w.WriteHeader(200)
 	w.Write(bytes)
 
 }
-func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
+func (e *Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
 
-	nickname:=r.URL.Query().Get("nickname")
-	password:=r.URL.Query().Get("password")
+	nickname := r.URL.Query().Get("nickname")
+	password := r.URL.Query().Get("password")
 
-	user,err:=e.UserDAO.GetUserByNickname(context.TODO(), nickname)
-	if err!=nil {
+	user, err := e.UserDAO.GetUserByNickname(context.TODO(), nickname)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	if strings.Compare(password, user.Password) !=0 {
+	if strings.Compare(password, user.Password) != 0 {
 		e.handleError(w, errors.New("unauthorized"))
 		return
 	}
 
-	token,err := auth.CreateToken(user.ID)
-	if err!=nil {
+	token, err := auth.CreateToken(user.ID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	tokenStruct:=&TokenParams{Token:token}
+	tokenStruct := &TokenParams{Token: token}
 
-	bytes, err:=json.Marshal(tokenStruct)
-	if err!=nil {
+	bytes, err := json.Marshal(tokenStruct)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -248,15 +247,15 @@ func (e* Endpoints) GetTokenHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(bytes)
 }
 
-func (e* Endpoints) Middleware(h http.Handler) http.Handler {
+func (e *Endpoints) Middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		e.writeHeaders(w)
-		if r.Method==http.MethodOptions {
+		if r.Method == http.MethodOptions {
 			w.WriteHeader(200)
 		}
 
-		_, err:=e.getUserIDFromToken(r)
-		if err!=nil {
+		_, err := e.getUserIDFromToken(r)
+		if err != nil {
 			e.handleError(w, err)
 			return
 		}
@@ -265,13 +264,13 @@ func (e* Endpoints) Middleware(h http.Handler) http.Handler {
 }
 
 func (e *Endpoints) getUserIDFromToken(r *http.Request) (primitive.ObjectID, error) {
-	authHeader:= r.Header.Get("Authorization")
+	authHeader := r.Header.Get("Authorization")
 
 	if authHeader == "" {
 		return primitive.ObjectID{}, errors.New("unauthorized")
 	}
 
-	headerParts:=strings.Split(authHeader, " ")
+	headerParts := strings.Split(authHeader, " ")
 	if len(headerParts) != 2 {
 		return primitive.ObjectID{}, errors.New("unauthorized")
 	}
@@ -279,58 +278,57 @@ func (e *Endpoints) getUserIDFromToken(r *http.Request) (primitive.ObjectID, err
 	return auth.CheckToken(headerParts[1])
 }
 
-func(e *Endpoints) writeHeaders(w http.ResponseWriter) {
+func (e *Endpoints) writeHeaders(w http.ResponseWriter) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 }
 
-
 type AddChatParams struct {
 	Users []string `json:"users"`
-	Name string `json:"name"`
+	Name  string   `json:"name"`
 }
 
 type AddMessageParams struct {
-	FromID string `json:"fromID"`
-	ChatID string `json:"chatID"`
-	Text string `json:"text"`
+	FromID         string                   `json:"fromID"`
+	ChatID         string                   `json:"chatID"`
+	Text           string                   `json:"text"`
 	AttachmentLink *messages.AttachmentLink `json:"attachmentLink,omitempty"`
 }
 
-func (e *Endpoints) AddMessageHandler (w http.ResponseWriter, r *http.Request)  {
+func (e *Endpoints) AddMessageHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var params AddMessageParams
 	err := decoder.Decode(&params)
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	fromID, err:=primitive.ObjectIDFromHex(params.FromID)
-	if err!=nil {
+	fromID, err := primitive.ObjectIDFromHex(params.FromID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	chatID, err:=primitive.ObjectIDFromHex(params.ChatID)
-	if err!=nil {
+	chatID, err := primitive.ObjectIDFromHex(params.ChatID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
-	
-	msg:=&messages.Message{
-		ID:     primitive.NewObjectID(),
-		From:   fromID,
-		ChatID: chatID,
-		Text:   params.Text,
-		Time:   time.Now().UnixNano(),
-		AttachmentLink:params.AttachmentLink,
+
+	msg := &messages.Message{
+		ID:             primitive.NewObjectID(),
+		From:           fromID,
+		ChatID:         chatID,
+		Text:           params.Text,
+		Time:           time.Now().UnixNano(),
+		AttachmentLink: params.AttachmentLink,
 	}
 
 	err = e.MessageDAO.AddMessage(context.Background(), msg)
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -342,29 +340,29 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var params AddChatParams
 	err := decoder.Decode(&params)
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 	var userIDs []primitive.ObjectID
-	for _, id:=range params.Users {
-		idBSON,err:=primitive.ObjectIDFromHex(id)
-		if err!=nil {
+	for _, id := range params.Users {
+		idBSON, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
 			e.handleError(w, err)
 			return
 		}
 		userIDs = append(userIDs, idBSON)
 	}
 
-	chat:=&chats.Chat{
+	chat := &chats.Chat{
 		ID:              primitive.NewObjectID(),
 		LastMessageTime: time.Now().UnixNano(),
 		Users:           userIDs,
 		Name:            params.Name,
 	}
 
-	err=e.ChatDAO.AddChat(context.Background(), chat)
-	if err!=nil {
+	err = e.ChatDAO.AddChat(context.Background(), chat)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -372,34 +370,33 @@ func (e *Endpoints) AddChatHandler(w http.ResponseWriter, r *http.Request) {
 	e.chatChannel <- chat
 }
 
-
 type AddAttachmentResponse struct {
 	ID primitive.ObjectID `json:"id"`
 }
 
 func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
-	bytes, err:=ioutil.ReadAll(r.Body)
-	if err!=nil {
+	ctx := context.Background()
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	att:=&storage.Attachment{
+	att := &storage.Attachment{
 		ID:      primitive.NewObjectID(),
 		Content: bytes,
 	}
 
-	err=e.AttachmentDAO.InsertAttachment(ctx, att)
-	if err!=nil {
+	err = e.AttachmentDAO.InsertAttachment(ctx, att)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	resp:=&AddAttachmentResponse{ID:att.ID}
+	resp := &AddAttachmentResponse{ID: att.ID}
 
-	bytes, err=json.Marshal(resp)
-	if err!=nil {
+	bytes, err = json.Marshal(resp)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -409,16 +406,16 @@ func (e *Endpoints) UploadAttachmentHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (e *Endpoints) GetAttachmentHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
+	ctx := context.Background()
 	id := r.URL.Query().Get("id")
-	attID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
+	attID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	att,err:= e.AttachmentDAO.GetAttachmentByID(ctx, attID)
-	if err!=nil {
+	att, err := e.AttachmentDAO.GetAttachmentByID(ctx, attID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -428,17 +425,17 @@ func (e *Endpoints) GetAttachmentHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (e *Endpoints) GetUserByNicknameHandler(w http.ResponseWriter, r *http.Request) {
-	ctx:=context.Background()
+	ctx := context.Background()
 	nickname := r.URL.Query().Get("nickname")
 
-	user, err:=e.UserDAO.GetUserByNickname(ctx, nickname)
-	if err!=nil {
+	user, err := e.UserDAO.GetUserByNickname(ctx, nickname)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	bytes, err:=json.Marshal(user)
-	if err!=nil {
+	bytes, err := json.Marshal(user)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -449,22 +446,22 @@ func (e *Endpoints) GetUserByNicknameHandler(w http.ResponseWriter, r *http.Requ
 
 func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
-	ctx:=context.Background()
+	ctx := context.Background()
 	id := r.URL.Query().Get("id")
-	userID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
+	userID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	user,err:= e.UserDAO.GetUserByID(ctx, userID)
-	if err!=nil {
+	user, err := e.UserDAO.GetUserByID(ctx, userID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	bytes, err:=json.Marshal(user)
-	if err!=nil {
+	bytes, err := json.Marshal(user)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -475,30 +472,30 @@ func (e *Endpoints) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
-	ctx:=context.TODO()
+	ctx := context.TODO()
 	id := r.URL.Query().Get("userId")
-	userID,err:=primitive.ObjectIDFromHex(id)
-	if err!=nil {
+	userID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	chats,err:= e.ChatDAO.GetChatsByUser(ctx, userID)
-	if err!=nil {
+	chats, err := e.ChatDAO.GetChatsByUser(ctx, userID)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	for i:=0; i<len(chats); i++ {
-		chats[i],err = e.enrichChat(ctx, chats[i])
-		if err!=nil {
+	for i := 0; i < len(chats); i++ {
+		chats[i], err = e.enrichChat(ctx, chats[i])
+		if err != nil {
 			e.handleError(w, err)
 			return
 		}
 	}
 
-	bytes, err:=json.Marshal(chats)
-	if err!=nil {
+	bytes, err := json.Marshal(chats)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -509,35 +506,35 @@ func (e *Endpoints) GetChatsByUser(w http.ResponseWriter, r *http.Request) {
 
 func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 	e.writeHeaders(w)
-	ctx:=context.TODO()
+	ctx := context.TODO()
 
-	chatID,err :=primitive.ObjectIDFromHex(r.URL.Query().Get("chatId"))
-	if err!=nil {
+	chatID, err := primitive.ObjectIDFromHex(r.URL.Query().Get("chatId"))
+	if err != nil {
 		spew.Dump(err)
 		e.handleError(w, err)
 		return
 	}
 
 	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
 	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	msgs, err:=e.MessageDAO.GetMessagesByChat(ctx, chatID, limit, offset)
-	if err!=nil {
+	msgs, err := e.MessageDAO.GetMessagesByChat(ctx, chatID, limit, offset)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
 
-	bytes, err:=json.Marshal(msgs)
-	if err!=nil {
+	bytes, err := json.Marshal(msgs)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -547,28 +544,29 @@ func (e *Endpoints) GetMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 type RegisterParams struct {
-	FirstName string`json:"firstName"`
+	FirstName  string `json:"firstName"`
 	SecondName string `json:"secondName"`
-	NickName string `json:"nickName"`
-	Password string ` json:"password"`
+	NickName   string `json:"nickName"`
+	Password   string ` json:"password"`
 }
 
 func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("revieve register query")
 	e.writeHeaders(w)
-	if r.Method==http.MethodOptions {
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(200)
 	}
 	decoder := json.NewDecoder(r.Body)
 	var params RegisterParams
 	err := decoder.Decode(&params)
-	if err!=nil {
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
-	ctx:=context.Background()
+	ctx := context.Background()
 
-	exists, err:=e.UserDAO.NickNameExists(ctx, params.NickName)
-	if err!=nil {
+	exists, err := e.UserDAO.NickNameExists(ctx, params.NickName)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -578,7 +576,7 @@ func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newUser:=&users.User{
+	newUser := &users.User{
 		ID:         primitive.NewObjectID(),
 		FirstName:  params.FirstName,
 		SecondName: params.SecondName,
@@ -586,13 +584,13 @@ func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Password:   params.Password,
 	}
 
-	err=e.UserDAO.InsertUser(ctx, newUser)
-	if err!=nil {
+	err = e.UserDAO.InsertUser(ctx, newUser)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
-	bytes, err:=json.Marshal(newUser)
-	if err!=nil {
+	bytes, err := json.Marshal(newUser)
+	if err != nil {
 		e.handleError(w, err)
 		return
 	}
@@ -602,21 +600,21 @@ func (e *Endpoints) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Endpoints) handleError(w http.ResponseWriter, err error) {
-		log.Print(err)
-		http.Error(w, err.Error(), 500)
+	log.Print(err)
+	http.Error(w, err.Error(), 500)
 }
 
 func (e *Endpoints) enrichChat(ctx context.Context, chat *chats.Chat) (*chats.Chat, error) {
-	msg, err:=e.MessageDAO.GetMessagesByChat(ctx, chat.ID, 1,0)
-	if err!=nil {
-		return nil,err
+	msg, err := e.MessageDAO.GetMessagesByChat(ctx, chat.ID, 1, 0)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(msg)==0 {
+	if len(msg) == 0 {
 		return chat, nil
 	}
 
-	if msg[0].AttachmentLink!=nil && msg[0].Text=="" {
+	if msg[0].AttachmentLink != nil && msg[0].Text == "" {
 		chat.LastMessage = "attachment"
 	} else {
 		chat.LastMessage = msg[0].Text
@@ -628,7 +626,7 @@ func (e *Endpoints) enrichChat(ctx context.Context, chat *chats.Chat) (*chats.Ch
 }
 
 func main() {
-	ctx:=context.TODO()
+	ctx := context.TODO()
 
 	client, err := common.NewClient()
 	if err != nil {
@@ -636,27 +634,27 @@ func main() {
 	}
 	defer client.Disconnect(ctx)
 
-	userDAO,err:= users.NewDAO(ctx, client)
-	if err!=nil {
+	userDAO, err := users.NewDAO(ctx, client)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	chatDAO, err:=chats.NewDAO(ctx, client)
-	if err!=nil {
+	chatDAO, err := chats.NewDAO(ctx, client)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	messageDAO, err:=messages.NewDAO(ctx, client)
-	if err!=nil {
+	messageDAO, err := messages.NewDAO(ctx, client)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	attDAO, err:=storage.NewDAO(ctx, client)
-	if err!=nil {
+	attDAO, err := storage.NewDAO(ctx, client)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	e:=NewEndpoints(userDAO, chatDAO, messageDAO, attDAO)
+	e := NewEndpoints(userDAO, chatDAO, messageDAO, attDAO)
 
 	router := mux.NewRouter()
 	router.Handle("/register", http.HandlerFunc(e.RegisterHandler)).Methods(http.MethodPost, http.MethodOptions)
@@ -677,8 +675,7 @@ func main() {
 	router.Handle("/messageWs/", http.HandlerFunc(e.GetMessageSocketHandler))
 	router.Handle("/chatWs/", http.HandlerFunc(e.GetChatSocketHandler))
 
-
-	http.Handle("/",router)
+	http.Handle("/", router)
 
 	fmt.Println("Server is listening...")
 	log.Fatal(http.ListenAndServe(":8181", nil))
