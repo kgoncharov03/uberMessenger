@@ -9,7 +9,7 @@ import (
 )
 
 func NewClient() (*mongo.Client, error) {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://root:root@34.90.137.37:27017"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://root:root@127.0.0.1:27017"))
 	if err != nil {
 		return nil, err
 	}
